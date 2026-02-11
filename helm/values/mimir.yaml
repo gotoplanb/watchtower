@@ -1,0 +1,126 @@
+mimir:
+  structuredConfig:
+    multitenancy_enabled: false
+    common:
+      storage:
+        backend: filesystem
+        filesystem:
+          dir: /data/mimir
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/mimir-blocks
+    compactor:
+      data_dir: /data/mimir-compactor
+    ingester:
+      push_grpc_method_enabled: true
+      ring:
+        replication_factor: 1
+    ingest_storage:
+      enabled: false
+
+# Run everything in a single zone for local dev
+ingester:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+  zoneAwareReplication:
+    enabled: false
+
+distributor:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+querier:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+query_frontend:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+store_gateway:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+  zoneAwareReplication:
+    enabled: false
+
+compactor:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+
+# Disable Kafka — use classic ingest path for local dev
+kafka:
+  enabled: false
+
+query_scheduler:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# Disable rollout operator — not needed for local dev
+rollout_operator:
+  enabled: false
+
+# Disable components not needed locally
+alertmanager:
+  enabled: false
+ruler:
+  enabled: false
+overrides_exporter:
+  enabled: false
+nginx:
+  enabled: false
+
+# Disable minio — we use local filesystem
+minio:
+  enabled: false

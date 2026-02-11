@@ -1,0 +1,64 @@
+// ===== OTLP Receiver =====
+
+otelcol.receiver.otlp "default" {
+    grpc {
+        endpoint = "0.0.0.0:4317"
+    }
+    http {
+        endpoint = "0.0.0.0:4318"
+    }
+
+    output {
+        traces  = [otelcol.processor.batch.default.input]
+        metrics = [otelcol.processor.batch.default.input]
+        logs    = [otelcol.processor.batch.default.input]
+    }
+}
+
+// ===== Batch Processor =====
+
+otelcol.processor.batch "default" {
+    timeout         = "5s"
+    send_batch_size = 1000
+
+    output {
+        traces  = [otelcol.exporter.otlp.tempo.input]
+        metrics = [otelcol.exporter.prometheus.mimir.input]
+        logs    = [otelcol.exporter.loki.default.input]
+    }
+}
+
+// ===== Trace Export -> Tempo =====
+
+otelcol.exporter.otlp "tempo" {
+    client {
+        endpoint = "tempo.watchtower.svc.cluster.local:4317"
+        tls {
+            insecure = true
+        }
+    }
+}
+
+// ===== Metrics Export -> Mimir =====
+
+otelcol.exporter.prometheus "mimir" {
+    forward_to = [prometheus.remote_write.mimir.receiver]
+}
+
+prometheus.remote_write "mimir" {
+    endpoint {
+        url = "http://mimir-distributor.watchtower.svc.cluster.local:8080/api/v1/push"
+    }
+}
+
+// ===== Logs Export -> Loki =====
+
+otelcol.exporter.loki "default" {
+    forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+    endpoint {
+        url = "http://loki.watchtower.svc.cluster.local:3100/loki/api/v1/push"
+    }
+}

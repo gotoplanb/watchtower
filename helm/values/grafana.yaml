@@ -1,0 +1,58 @@
+adminUser: admin
+adminPassword: watchtower
+
+service:
+  type: NodePort
+  nodePort: 30000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.watchtower.svc.cluster.local:3200
+        isDefault: false
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: loki
+            filterByTraceID: true
+          tracesToMetrics:
+            datasourceUid: mimir
+          serviceMap:
+            datasourceUid: mimir
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki.watchtower.svc.cluster.local:3100
+        isDefault: false
+        jsonData:
+          derivedFields:
+            - datasourceUid: tempo
+              matcherRegex: '"trace_id":"(\w+)"'
+              name: TraceID
+              url: '$${__value.raw}'
+      - name: Mimir
+        type: prometheus
+        access: proxy
+        url: http://mimir-query-frontend.watchtower.svc.cluster.local:8080/prometheus
+        isDefault: true
+        jsonData:
+          exemplarTraceIdDestinations:
+            - datasourceUid: tempo
+              name: trace_id
+
+initChownData:
+  enabled: false
+
+persistence:
+  enabled: false

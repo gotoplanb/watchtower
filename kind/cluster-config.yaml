@@ -1,0 +1,18 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: watchtower
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Grafana UI
+      - containerPort: 30000
+        hostPort: 13000
+        protocol: TCP
+      # OTLP gRPC (for instrumented apps to send telemetry)
+      - containerPort: 30317
+        hostPort: 14317
+        protocol: TCP
+      # OTLP HTTP
+      - containerPort: 30318
+        hostPort: 14318
+        protocol: TCP

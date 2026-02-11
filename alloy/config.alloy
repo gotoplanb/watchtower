@@ -1,0 +1,85 @@
+// ===== OTLP Receiver =====
+// Receives telemetry from instrumented applications via gRPC and HTTP
+// Fan-out: same data enters two independent pipelines
+
+otelcol.receiver.otlp "default" {
+    grpc {
+        endpoint = "0.0.0.0:4317"
+    }
+    http {
+        endpoint = "0.0.0.0:4318"
+    }
+
+    output {
+        traces  = [otelcol.processor.batch.local.input, otelcol.processor.batch.sumo.input]
+        metrics = [otelcol.processor.batch.local.input, otelcol.processor.batch.sumo.input]
+        logs    = [otelcol.processor.batch.local.input, otelcol.processor.batch.sumo.input]
+    }
+}
+
+// ===== Local LGTM Pipeline =====
+
+otelcol.processor.batch "local" {
+    timeout         = "5s"
+    send_batch_size = 1000
+
+    output {
+        traces  = [otelcol.exporter.otlp.tempo.input]
+        metrics = [otelcol.exporter.prometheus.mimir.input]
+        logs    = [otelcol.exporter.loki.default.input]
+    }
+}
+
+otelcol.exporter.otlp "tempo" {
+    client {
+        endpoint = "tempo.watchtower.svc.cluster.local:4317"
+        tls {
+            insecure = true
+        }
+    }
+}
+
+otelcol.exporter.prometheus "mimir" {
+    forward_to = [prometheus.remote_write.mimir.receiver]
+}
+
+prometheus.remote_write "mimir" {
+    endpoint {
+        url = "http://mimir-distributor.watchtower.svc.cluster.local:8080/api/v1/push"
+    }
+}
+
+otelcol.exporter.loki "default" {
+    forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+    endpoint {
+        url = "http://loki.watchtower.svc.cluster.local:3100/loki/api/v1/push"
+    }
+}
+
+// ===== Sumo Logic Pipeline =====
+// Sends the same telemetry to a dedicated Sumo Logic OTLP prototype collector
+// Set SUMO_OTLP_ENDPOINT via environment variable or Kubernetes Secret
+
+otelcol.processor.batch "sumo" {
+    timeout         = "10s"
+    send_batch_size = 2000
+
+    output {
+        traces  = [otelcol.exporter.otlphttp.sumo.input]
+        metrics = [otelcol.exporter.otlphttp.sumo.input]
+        logs    = [otelcol.exporter.otlphttp.sumo.input]
+    }
+}
+
+otelcol.exporter.otlphttp "sumo" {
+    client {
+        endpoint = env("SUMO_OTLP_ENDPOINT")
+        // If Sumo requires headers for authentication:
+        // headers = {
+        //     "X-Sumo-Source" = env("SUMO_SOURCE_HEADER"),
+        // }
+    }
+}

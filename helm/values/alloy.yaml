@@ -1,0 +1,36 @@
+alloy:
+  configMap:
+    create: false
+    name: alloy-config
+    key: config.alloy
+  extraEnv:
+    - name: SUMO_OTLP_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: sumo-credentials
+          key: endpoint
+  extraPorts:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+      appProtocol: h2c
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+
+controller:
+  type: deployment
+  replicas: 1
+
+service:
+  type: NodePort
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
