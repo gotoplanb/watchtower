@@ -42,6 +42,45 @@ Open Grafana and explore:
 
 Click a trace to see correlated logs (datasource cross-links are pre-configured).
 
+### Instrument Your Own App
+
+Point any OTLP-compatible SDK at `localhost:4317` (gRPC) or `localhost:4318` (HTTP).
+
+**Python (Django/FastAPI/Flask):**
+```bash
+pip install opentelemetry-distro opentelemetry-exporter-otlp
+opentelemetry-bootstrap -a install
+```
+```bash
+OTEL_SERVICE_NAME=my-app \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+opentelemetry-instrument python app.py
+```
+
+**Node.js:**
+```bash
+npm install @opentelemetry/auto-instrumentations-node @opentelemetry/exporter-trace-otlp-grpc
+```
+```bash
+OTEL_SERVICE_NAME=my-app \
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+node --require @opentelemetry/auto-instrumentations-node/register app.js
+```
+
+**Go:**
+```go
+import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+
+exporter, _ := otlptracegrpc.New(ctx,
+    otlptracegrpc.WithEndpoint("localhost:4317"),
+    otlptracegrpc.WithInsecure(),
+)
+```
+
+**Docker Compose app:** Use `host.docker.internal:4317` instead of `localhost:4317`.
+
+For adding Prometheus scrape targets or Faro (browser RUM), see [docs/extending.md](docs/extending.md).
+
 ---
 
 ## Kind/Helm Deployment (Advanced)
