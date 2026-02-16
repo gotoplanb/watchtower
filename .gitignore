@@ -1,2 +1,29 @@
+# macOS
 .DS_Store
+
+# Environment files (use .env.example as template)
 .env
+.env.local
+.env.*.local
+
+# Python virtual environments
+test-data/.venv/
+__pycache__/
+*.pyc
+
+# Helm rendered output (generated, not committed)
+helm/rendered/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Kubernetes secrets (never commit)
+*-secret.yaml
+*-secrets.yaml
+
+# Local overrides
+docker-compose.override.yml
+docker-compose.local.yml

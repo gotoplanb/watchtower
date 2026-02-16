@@ -1,0 +1,61 @@
+# Grafana Datasources Provisioning - Local Docker Deployment
+# Auto-configures Prometheus, Loki, and Tempo with cross-links for correlation
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - Metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    uid: prometheus
+    jsonData:
+      httpMethod: POST
+      timeInterval: "15s"
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  # Loki - Log aggregation
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    uid: loki
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"
+
+  # Tempo - Distributed tracing
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    uid: tempo
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: true
+        filterBySpanID: true
+        tags:
+          - key: service.name
+            value: service_name
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        tags:
+          - key: service.name
+            value: service
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki

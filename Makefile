@@ -1,7 +1,8 @@
 include .env
 export
 
-.PHONY: setup teardown deploy status port-forward logs test-data render
+.PHONY: setup teardown deploy status port-forward logs test-data render \
+        docker-up docker-down docker-logs docker-status docker-clean
 
 # === Cluster lifecycle ===
 
@@ -97,3 +98,30 @@ render:
 	helm template alloy grafana/alloy -f helm/values/alloy.yaml > helm/rendered/alloy.yaml
 	@echo "Rendered manifests written to helm/rendered/"
 	@echo "Open these files to see what Helm generates under the hood."
+
+# =============================================================================
+# Docker Compose Deployment (alternative to Kind/Helm)
+# =============================================================================
+
+docker-up:
+	docker-compose up -d
+	@echo ""
+	@echo "Watchtower stack started!"
+	@echo "  Grafana:   http://localhost:3000 (admin / watchtower)"
+	@echo "  OTLP gRPC: localhost:4317"
+	@echo "  OTLP HTTP: localhost:4318"
+	@echo ""
+	@echo "Run 'make docker-logs' to tail Alloy logs"
+
+docker-down:
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f alloy
+
+docker-status:
+	docker-compose ps
+
+docker-clean:
+	docker-compose down -v
+	@echo "Volumes removed. All data deleted."

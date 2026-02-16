@@ -1,0 +1,82 @@
+// Watchtower Alloy Configuration - Docker Compose
+// Receives OTLP telemetry and routes to local Tempo, Loki, and Prometheus
+//
+// To extend this config, see docs/extending.md for examples of:
+// - Adding Prometheus scrape targets
+// - Adding Faro receiver for frontend RUM
+// - Adding cloud dual-write (Grafana Cloud, Sumo Logic)
+
+// =============================================================================
+// OTLP RECEIVER - Receives traces, metrics, and logs from instrumented apps
+// =============================================================================
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.default.input]
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+  }
+}
+
+// =============================================================================
+// BATCH PROCESSOR - Batches telemetry for efficient export
+// =============================================================================
+
+otelcol.processor.batch "default" {
+  timeout         = "5s"
+  send_batch_size = 1000
+
+  output {
+    traces  = [otelcol.exporter.otlp.tempo.input]
+    metrics = [otelcol.exporter.prometheus.local.input]
+    logs    = [otelcol.exporter.loki.local.input]
+  }
+}
+
+// =============================================================================
+// TRACE EXPORTER -> Tempo
+// =============================================================================
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// =============================================================================
+// METRICS EXPORTER -> Prometheus (via remote-write)
+// =============================================================================
+
+otelcol.exporter.prometheus "local" {
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// =============================================================================
+// LOGS EXPORTER -> Loki
+// =============================================================================
+
+otelcol.exporter.loki "local" {
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

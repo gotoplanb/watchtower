@@ -1,8 +1,54 @@
 # Watchtower
 
-A local Grafana LGTM (Loki, Grafana, Tempo, Mimir) observability stack running on a [kind](https://kind.sigs.k8s.io/) cluster, with [Grafana Alloy](https://grafana.com/docs/alloy/) as the OTLP telemetry router. Alloy dual-writes all telemetry to both the local stack and Sumo Logic.
+A clean, reusable local LGTM (Loki, Grafana, Tempo, Mimir/Prometheus) observability stack with [Grafana Alloy](https://grafana.com/docs/alloy/) as the OTLP telemetry router.
 
-## Prerequisites
+**Two deployment options:**
+- **Docker Compose** - Simple, fast, standard ports (recommended for most users)
+- **Kind/Helm** - Kubernetes-native, distributed Mimir, learning K8s observability
+
+## Docker Compose Quick Start
+
+The fastest way to get started. No Kubernetes knowledge required.
+
+```bash
+make docker-up      # Start the stack
+make docker-status  # Check container health
+make docker-logs    # Tail Alloy logs
+make docker-down    # Stop the stack
+```
+
+| Service | URL / Address | Notes |
+|---------|--------------|-------|
+| Grafana | http://localhost:3000 | Login: `admin` / `watchtower` |
+| OTLP gRPC | `localhost:4317` | Send traces/metrics/logs here |
+| OTLP HTTP | `localhost:4318` | Alternative OTLP endpoint |
+| Prometheus | http://localhost:9090 | Metrics UI |
+| Loki | http://localhost:3100 | Logs API |
+| Tempo | http://localhost:3200 | Traces API |
+
+### Generate Test Data
+
+```bash
+cd test-data
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python generate.py --endpoint localhost:4317 --rate 10
+```
+
+Open Grafana and explore:
+- **Tempo**: Explore > Tempo > Search > Run query
+- **Loki**: Explore > Loki > `{service_name="watchtower-generator"}`
+- **Prometheus**: Explore > Prometheus > `target_info`
+
+Click a trace to see correlated logs (datasource cross-links are pre-configured).
+
+---
+
+## Kind/Helm Deployment (Advanced)
+
+For learning Kubernetes observability with distributed Mimir.
+
+### Prerequisites
 
 | Tool | Install | Purpose |
 |------|---------|---------|
@@ -11,7 +57,7 @@ A local Grafana LGTM (Loki, Grafana, Tempo, Mimir) observability stack running o
 | kubectl | `brew install kubectl` | Kubernetes CLI |
 | helm | `brew install helm` | Kubernetes package manager |
 
-## Quick Start
+### Quick Start
 
 ```bash
 make setup          # Create kind cluster, namespace, add Helm repos
@@ -76,6 +122,18 @@ The generator simulates three microservices (api-gateway, order-service, payment
 
 ## Make Targets
 
+### Docker Compose
+
+```
+make docker-up          Start the Docker Compose stack
+make docker-down        Stop the stack
+make docker-logs        Tail Alloy logs
+make docker-status      Show container status
+make docker-clean       Stop and remove all volumes (deletes data)
+```
+
+### Kind/Helm
+
 ```
 make setup              Create kind cluster + namespace + Helm repos
 make deploy             Deploy all components (tempo, loki, mimir, grafana, alloy)
@@ -97,6 +155,13 @@ make teardown           Delete the kind cluster entirely
 
 ```
 watchtower/
+├── docker-compose.yml            # Docker Compose deployment
+├── docker/
+│   ├── alloy-config.alloy        # Alloy config for Docker (local-only)
+│   ├── tempo-config.yaml         # Tempo config
+│   ├── loki-config.yaml          # Loki config
+│   ├── prometheus.yaml           # Prometheus config
+│   └── grafana-datasources.yaml  # Grafana datasource provisioning
 ├── kind/
 │   └── cluster-config.yaml       # kind cluster with NodePort mappings
 ├── helm/values/
