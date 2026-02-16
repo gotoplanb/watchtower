@@ -1,6 +1,8 @@
 # Watchtower
 
-A clean, reusable local LGTM (Loki, Grafana, Tempo, Prometheus) observability stack with [Grafana Alloy](https://grafana.com/docs/alloy/) as the OTLP telemetry router.
+Local observability infrastructure for LLM-assisted development. Gives coding agents (Claude Code, Cursor, etc.) fast feedback loops: **build → test → observe telemetry → adjust**.
+
+The local LGTM stack (Loki, Grafana, Tempo, Prometheus) runs on your machine. [Grafana Alloy](https://grafana.com/docs/alloy/) receives OTLP telemetry and can dual-write to cloud backends (Grafana Cloud, Sumo Logic) for human review.
 
 ## Send Telemetry to Watchtower
 
@@ -19,6 +21,20 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 **From a Docker container:** Use `host.docker.internal:4317` instead of `localhost`.
 
 **Grafana UI:** http://localhost:3000 (login: `admin` / `watchtower`)
+
+### Query Telemetry (for LLMs)
+
+```bash
+# Recent traces
+curl -s 'http://localhost:3200/api/search?limit=10' | jq .
+
+# Logs by service
+curl -s 'http://localhost:3100/loki/api/v1/query_range' \
+  --data-urlencode 'query={service_name="my-app"}' | jq .
+
+# Prometheus metrics
+curl -s 'http://localhost:9090/api/v1/query?query=up' | jq .
+```
 
 ---
 
