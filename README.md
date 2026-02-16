@@ -1,10 +1,26 @@
 # Watchtower
 
-A clean, reusable local LGTM (Loki, Grafana, Tempo, Mimir/Prometheus) observability stack with [Grafana Alloy](https://grafana.com/docs/alloy/) as the OTLP telemetry router.
+A clean, reusable local LGTM (Loki, Grafana, Tempo, Prometheus) observability stack with [Grafana Alloy](https://grafana.com/docs/alloy/) as the OTLP telemetry router.
 
-**Two deployment options:**
-- **Docker Compose** - Simple, fast, standard ports (recommended for most users)
-- **Kind/Helm** - Kubernetes-native, distributed Mimir, learning K8s observability
+## Send Telemetry to Watchtower
+
+**OTLP Endpoints (Docker Compose):**
+```
+gRPC: localhost:4317
+HTTP: localhost:4318
+```
+
+**Environment variables** (works with any OpenTelemetry SDK):
+```bash
+export OTEL_SERVICE_NAME=my-app
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+**From a Docker container:** Use `host.docker.internal:4317` instead of `localhost`.
+
+**Grafana UI:** http://localhost:3000 (login: `admin` / `watchtower`)
+
+---
 
 ## Docker Compose Quick Start
 
