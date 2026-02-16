@@ -10,6 +10,7 @@
 #   3000  - Grafana UI (admin/watchtower)
 #   4317  - OTLP gRPC (send traces/metrics/logs here)
 #   4318  - OTLP HTTP
+#   9000  - SonarQube UI (admin/watchtower)
 #   9090  - Prometheus UI
 #   3100  - Loki API
 #   3200  - Tempo API
@@ -136,8 +137,55 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ============================================================================
+  # SONARQUBE - Code Quality & Security Analysis
+  # ============================================================================
+  sonarqube:
+    image: sonarqube:community
+    container_name: watchtower-sonarqube
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonarqube
+      - SONAR_JDBC_USERNAME=sonarqube
+      - SONAR_JDBC_PASSWORD=sonarqube
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-extensions:/opt/sonarqube/extensions
+      - sonarqube-logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000"   # SonarQube UI
+    depends_on:
+      sonarqube-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
+  sonarqube-db:
+    image: postgres:16-alpine
+    container_name: watchtower-sonarqube-db
+    environment:
+      - POSTGRES_USER=sonarqube
+      - POSTGRES_PASSWORD=sonarqube
+      - POSTGRES_DB=sonarqube
+    volumes:
+      - sonarqube-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonarqube"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
 volumes:
   tempo-data:
   loki-data:
   prometheus-data:
   grafana-data:
+  sonarqube-data:
+  sonarqube-extensions:
+  sonarqube-logs:
+  sonarqube-db-data:

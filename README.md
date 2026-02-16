@@ -22,6 +22,8 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 
 **Grafana UI:** http://localhost:3000 (login: `admin` / `watchtower`)
 
+**SonarQube UI:** http://localhost:9000 (login: `admin` / `admin`, change on first login)
+
 ### Query Telemetry (for LLMs)
 
 ```bash
@@ -34,6 +36,26 @@ curl -s 'http://localhost:3100/loki/api/v1/query_range' \
 
 # Prometheus metrics
 curl -s 'http://localhost:9090/api/v1/query?query=up' | jq .
+```
+
+### Run Code Analysis (SonarQube)
+
+```bash
+# Run sonar-scanner from your project directory
+# First, create a project in SonarQube UI or via API:
+curl -u admin:your-password -X POST \
+  'http://localhost:9000/api/projects/create?name=my-app&project=my-app'
+
+# Then scan (requires sonar-scanner CLI):
+sonar-scanner \
+  -Dsonar.projectKey=my-app \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=http://localhost:9000 \
+  -Dsonar.token=YOUR_TOKEN
+
+# Get analysis results via API:
+curl -u admin:your-password \
+  'http://localhost:9000/api/issues/search?projectKeys=my-app&severities=CRITICAL,BLOCKER' | jq .
 ```
 
 ---
@@ -52,6 +74,7 @@ make docker-down    # Stop the stack
 | Service | URL / Address | Notes |
 |---------|--------------|-------|
 | Grafana | http://localhost:3000 | Login: `admin` / `watchtower` |
+| SonarQube | http://localhost:9000 | Login: `admin` / `admin` (change on first login) |
 | OTLP gRPC | `localhost:4317` | Send traces/metrics/logs here |
 | OTLP HTTP | `localhost:4318` | Alternative OTLP endpoint |
 | Prometheus | http://localhost:9090 | Metrics UI |
