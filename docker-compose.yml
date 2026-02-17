@@ -117,6 +117,9 @@ services:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
       - /etc/alloy/config.alloy
+    env_file:
+      - path: ./.env.grafana-cloud
+        required: false
     volumes:
       - ./docker/alloy-config.alloy:/etc/alloy/config.alloy:ro
     ports:
