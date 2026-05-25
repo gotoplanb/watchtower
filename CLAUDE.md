@@ -43,11 +43,13 @@ make docker-clean      # Down + delete volumes (wipes data)
 
 ### Configs (bind-mounted into containers)
 
-- `docker/alloy-config.alloy` — OTLP receiver → Tempo / Loki / Prometheus pipeline
+- `docker/alloy-config.d/` — Alloy loads **every** `*.alloy` file in this dir (mounted at `/etc/alloy/config.d`); all files share one component namespace.
+  - `pipeline.alloy` — committed generic OTLP receiver → Tempo / Loki / Prometheus pipeline.
+  - `local-scrapes.alloy` — **gitignored** local override for app-specific `prometheus.scrape` targets (e.g. Conduct's API/worker). Forwards into `prometheus.remote_write.local` defined in `pipeline.alloy`. Keeps the repo generic and the tree clean.
 - `docker/tempo-config.yaml`, `docker/loki-config.yaml`, `docker/prometheus.yaml`
 - `docker/grafana-datasources.yaml` — pre-provisioned Tempo/Loki/Prometheus DS
 
-To pick up an Alloy config edit: `docker compose restart alloy`. The file is bind-mounted, no rebuild needed.
+To pick up an Alloy config edit: `docker compose restart alloy`. The dir is bind-mounted, no rebuild needed. (If you change the *volume mount or command* in `docker-compose.yml`, use `docker compose up -d alloy` to recreate.)
 
 ### Alloy pipeline (current docker-compose config)
 
@@ -66,6 +68,8 @@ When verifying telemetry end-to-end, the right labels matter:
 - **Loki**: the OTLP→Loki exporter maps `service.name` resource attribute to the Loki label **`job`**, NOT `service_name`. Available stream labels are `exporter`, `job`, `level`. Query example: `{job="watchtower-generator"}`.
 - **Prometheus**: OTLP resources land as the `target_info` metric and as `job=<service.name>` labels on data points. Query series with `{job="watchtower-generator"}`.
 - **Tempo**: search by service name with `rootServiceName` in `/api/search` results.
+  - **Search is time-windowed.** `/api/search` with no `start`/`end` only searches the **last 1 hour** — old or clock-skewed traces silently return `{"traces":[]}` even though the blocks are on disk and the push counters (`tempo_distributor_spans_received_total`) are non-zero. This looks exactly like a broken backend but isn't. Generate fresh traffic and search within the hour, or pass explicit `start`/`end` epochs.
+  - The explicit window is capped at **168h (7 days)**; wider ranges are rejected with `range specified by start and end exceeds 168h`. Verified 2026-05-18: with fresh traffic, search + `/api/search/tags` return traces correctly — the Tempo config is fine, no infra fix needed.
 
 Quick health probes:
 ```bash

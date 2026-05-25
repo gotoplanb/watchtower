@@ -28,3 +28,4 @@ helm/rendered/
 # Local overrides
 docker-compose.override.yml
 docker-compose.local.yml
+docker/alloy-config.d/local-scrapes.alloy

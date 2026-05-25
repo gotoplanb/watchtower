@@ -116,12 +116,12 @@ services:
     command:
       - run
       - --server.http.listen-addr=0.0.0.0:12345
-      - /etc/alloy/config.alloy
+      - /etc/alloy/config.d
     env_file:
       - path: ./.env.grafana-cloud
         required: false
     volumes:
-      - ./docker/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - ./docker/alloy-config.d:/etc/alloy/config.d:ro
     ports:
       - "4317:4317"   # OTLP gRPC
       - "4318:4318"   # OTLP HTTP

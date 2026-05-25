@@ -64,6 +64,16 @@ prometheus.remote_write "local" {
 }
 
 // =============================================================================
+// SCRAPING NON-OTLP APPS
+// To scrape an app that exposes prometheus_client metrics over HTTP (instead of
+// pushing OTLP), drop a `prometheus.scrape` block into another *.alloy file in
+// this directory and forward it to `prometheus.remote_write.local.receiver`.
+// Components share one namespace across every file here, so it can reference the
+// receiver defined above. Keep app-specific targets in a gitignored
+// `local-scrapes.alloy` so this generic pipeline stays reusable.
+// =============================================================================
+
+// =============================================================================
 // LOGS EXPORTER -> Loki
 // =============================================================================
 
