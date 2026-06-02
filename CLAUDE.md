@@ -79,6 +79,8 @@ curl -s 'http://localhost:9090/api/v1/label/__name__/values' | head -c 500    # 
 curl -s 'http://localhost:12345/metrics' | grep otelcol_receiver_accepted     # Alloy throughput
 ```
 
+For structured query access (handy when an agent is doing the asking), [`gcx`](https://github.com/grafana/gcx) is installed and authenticated to local Grafana via the `gcx-explorer` service account. Setup steps and gotchas: [`docs/gcx.md`](docs/gcx.md).
+
 ## Known Issue: Sparse OTLP Metrics
 
 OTLP histogram and counter metrics from instrumented apps don't show up well in Prometheus through `otelcol.exporter.prometheus` + `prometheus.remote_write`. Confirmed by counter comparison during testing on 2026-04-27:
