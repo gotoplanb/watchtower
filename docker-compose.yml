@@ -184,6 +184,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Local-only sandboxed-cargo-over-HTTP runner for the Conduct code-gen eval
+  # flywheel (gotoplanb/watchtower#1). Like SonarQube: code-quality/research
+  # infra, NOT observability and NOT in terragrunt. See services/rust-build/.
+  rust-build:
+    build: ./services/rust-build
+    container_name: watchtower-rust-build
+    ports:
+      - "8055:8080"   # Conduct worker reaches it at host.docker.internal:8055
+    volumes:
+      - rust-build-cargo:/home/builder/.cargo   # persist the registry cache
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/health',timeout=2).read()==b'ok' else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
 volumes:
   tempo-data:
   loki-data:
@@ -193,3 +211,4 @@ volumes:
   sonarqube-extensions:
   sonarqube-logs:
   sonarqube-db-data:
+  rust-build-cargo:
