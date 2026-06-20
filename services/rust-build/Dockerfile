@@ -10,6 +10,12 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && rustup component add clippy
 
+# cargo-mutants: the mutation-testing tool for the shallow-test score
+# (gotoplanb/conduct#28). Installed to /usr/local/bin (on PATH, OUTSIDE
+# CARGO_HOME) so the runtime cargo-cache volume doesn't shadow it. Slow to build
+# but cached. Uses the base image's CARGO_HOME (/usr/local/cargo) for the build.
+RUN cargo install cargo-mutants --locked --root /usr/local
+
 # Non-root: a crate's build.rs and tests execute arbitrary code here, so keep
 # the blast radius small. The shared rustc toolchain in /usr/local is readable;
 # CARGO_HOME points at the builder's home for a writable registry cache.
