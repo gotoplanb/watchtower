@@ -46,6 +46,9 @@ COMMANDS = {
     "build": ["cargo", "build", "--quiet", "--message-format=short"],
     "clippy": ["cargo", "clippy", "--quiet", "--message-format=short", "--", "-D", "warnings"],
     "test": ["cargo", "test", "--quiet"],
+    # Mutation testing (#28) — run the crate's OWN tests against mutants to find
+    # shallow tests. Slow; callers pass a generous timeout_s.
+    "mutants": ["cargo", "mutants", "--no-shuffle", "--colors", "never"],
 }
 DEFAULT_TIMEOUT_S = int(os.environ.get("RUST_BUILD_TIMEOUT_S", "120"))
 MAX_TAR_BYTES = 4 * 1024 * 1024  # decoded tar cap

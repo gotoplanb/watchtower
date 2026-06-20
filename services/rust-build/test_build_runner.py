@@ -158,6 +158,10 @@ class ArgvForTests(unittest.TestCase):
     def test_non_test_command_ignores_target(self):
         self.assertEqual(app._argv_for("check", app.COMMANDS, "golden"), app.COMMANDS["check"])
 
+    def test_mutants_command_registered(self):
+        self.assertIn("mutants", app.COMMANDS)
+        self.assertEqual(app.COMMANDS["mutants"][:2], ["cargo", "mutants"])
+
 
 if __name__ == "__main__":
     unittest.main()
