@@ -112,10 +112,34 @@ def run_one(workdir: str, argv: list[str], timeout_s: int) -> dict:
     }
 
 
+def _write_overlay(workdir: str, overlay_files: dict) -> None:
+    """Write caller-supplied files (e.g. a harness-authored test suite) into the
+    extracted project before running commands. Same zip-slip guard as extract."""
+    for path, content in overlay_files.items():
+        p = PurePosixPath(str(path))
+        if p.is_absolute() or any(part == ".." for part in p.parts):
+            raise BuildError("invalid_overlay_path", str(path))
+        if not isinstance(content, str):
+            raise BuildError("invalid_overlay", f"{path} content is not a string")
+        dest = Path(workdir) / p
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content)
+
+
+def _argv_for(cmd: str, commands_map: dict, test_target: str | None) -> list[str]:
+    """Resolve a logical command to argv. A `test` command scoped to a specific
+    integration test target becomes `cargo test --test <target> ...` so a single
+    suite's pass-rate can be measured in isolation."""
+    base = commands_map[cmd]
+    if cmd == "test" and test_target:
+        return [base[0], base[1], "--test", test_target, *base[2:]]
+    return base
+
+
 def build_from_request(payload: dict, *, commands_map: dict | None = None, runner=run_one) -> dict:
-    """Validate a /build payload, extract the tarball to a fresh temp dir, and
-    run each requested command in sequence. ``commands_map``/``runner`` are
-    injectable for tests (substitute non-cargo commands)."""
+    """Validate a /build payload, extract the tarball to a fresh temp dir,
+    overlay any caller files, and run each requested command in sequence.
+    ``commands_map``/``runner`` are injectable for tests (non-cargo commands)."""
     commands_map = commands_map or COMMANDS
     tar_b64 = payload.get("project_tar_b64")
     if not isinstance(tar_b64, str) or not tar_b64:
@@ -132,13 +156,16 @@ def build_from_request(payload: dict, *, commands_map: dict | None = None, runne
     if unknown:
         raise BuildError("unknown_command", ", ".join(unknown))
     timeout_s = int(payload.get("timeout_s") or DEFAULT_TIMEOUT_S)
+    overlay_files = payload.get("overlay_files") or {}
+    test_target = payload.get("test_target")
 
     results: dict[str, dict] = {}
     with tempfile.TemporaryDirectory(prefix="rb-") as tmp:
         _safe_extract(tar_bytes, tmp)
         workdir = _project_root(tmp)
+        _write_overlay(workdir, overlay_files)
         for cmd in commands:
-            results[cmd] = runner(workdir, commands_map[cmd], timeout_s)
+            results[cmd] = runner(workdir, _argv_for(cmd, commands_map, test_target), timeout_s)
     return {"results": results}
 
 

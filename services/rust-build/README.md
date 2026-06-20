@@ -22,14 +22,25 @@ generic is what lets the contract stay stable while Conduct's scoring evolves.
 ```
 POST /build
   {"project_tar_b64": "<base64 tar of a Cargo project>",
-   "commands": ["check", "build"],     # subset of: check build clippy test
-   "timeout_s": 120}                    # optional, per-command
+   "commands": ["check", "build", "test"],  # subset of: check build clippy test
+   "overlay_files": {"tests/golden.rs": "..."},  # optional: written into the
+                                                 # project before running (e.g. a
+                                                 # harness-authored test suite)
+   "test_target": "golden",            # optional: scopes `test` to
+                                       # `cargo test --test golden`
+   "timeout_s": 120}                   # optional, per-command
 ->
   {"results": {"check": {"exit": 0, "timed_out": false, "ms": 1234,
                          "stdout": "...", "stderr": "..."}, ...}}
 
 GET /health -> 200 "ok"
 ```
+
+`overlay_files` lets the caller inject golden/property test files (and, if a
+suite needs a dev-dependency like `proptest`, a merged `Cargo.toml`) before the
+run. `test_target` isolates one integration test so its pass-rate can be scored
+on its own. Conduct parses the raw `cargo test` output into pass-rates and
+proptest counterexamples — the service stays dumb.
 
 Bad input → `400 {"error": "<reason>", "detail": "..."}` (e.g. `missing_tar`,
 `bad_base64`, `no_cargo_toml`, `unknown_command`, `invalid_path`).

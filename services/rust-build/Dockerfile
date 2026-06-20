@@ -13,10 +13,15 @@ RUN apt-get update \
 # Non-root: a crate's build.rs and tests execute arbitrary code here, so keep
 # the blast radius small. The shared rustc toolchain in /usr/local is readable;
 # CARGO_HOME points at the builder's home for a writable registry cache.
-RUN useradd --create-home --uid 10001 builder
+# Pre-create $CARGO_HOME owned by builder so the named cache volume inherits
+# builder ownership on first mount (else it'd be root-owned -> cargo can't
+# write the registry cache when fetching a dev-dependency like proptest).
+ENV CARGO_HOME=/home/builder/.cargo
+RUN useradd --create-home --uid 10001 builder \
+    && mkdir -p "$CARGO_HOME" \
+    && chown -R builder:builder /home/builder
 USER builder
 WORKDIR /home/builder
-ENV CARGO_HOME=/home/builder/.cargo
 
 COPY --chown=builder:builder app.py /home/builder/app.py
 EXPOSE 8080
