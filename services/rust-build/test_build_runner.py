@@ -122,6 +122,42 @@ class BuildFromRequestTests(unittest.TestCase):
         out = app.build_from_request(payload, commands_map=_FAKE)
         self.assertEqual(out["results"]["check"]["exit"], 0)
 
+    def test_overlay_files_are_written_into_project(self):
+        # A fake "check" that exits 0 iff the overlaid suite file is present.
+        check_overlay = {"check": [
+            sys.executable, "-c",
+            "import os,sys; sys.exit(0 if os.path.exists('tests/golden.rs') else 7)",
+        ]}
+        payload = {
+            "project_tar_b64": _tar_b64({"Cargo.toml": _CARGO, "src/lib.rs": "pub fn f(){}"}),
+            "overlay_files": {"tests/golden.rs": "#[test] fn g(){ assert!(true); }"},
+        }
+        out = app.build_from_request(payload, commands_map=check_overlay)
+        self.assertEqual(out["results"]["check"]["exit"], 0)
+
+    def test_overlay_path_traversal_rejected(self):
+        payload = {
+            "project_tar_b64": _tar_b64({"Cargo.toml": _CARGO}),
+            "overlay_files": {"../escape.rs": "x"},
+        }
+        with self.assertRaises(app.BuildError) as cm:
+            app.build_from_request(payload, commands_map=_FAKE)
+        self.assertEqual(cm.exception.reason, "invalid_overlay_path")
+
+
+class ArgvForTests(unittest.TestCase):
+    def test_test_target_scopes_integration_test(self):
+        self.assertEqual(
+            app._argv_for("test", app.COMMANDS, "golden"),
+            ["cargo", "test", "--test", "golden", "--quiet"],
+        )
+
+    def test_test_without_target_runs_all(self):
+        self.assertEqual(app._argv_for("test", app.COMMANDS, None), ["cargo", "test", "--quiet"])
+
+    def test_non_test_command_ignores_target(self):
+        self.assertEqual(app._argv_for("check", app.COMMANDS, "golden"), app.COMMANDS["check"])
+
 
 if __name__ == "__main__":
     unittest.main()
