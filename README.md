@@ -338,3 +338,8 @@ The Grafana datasources are pre-wired for correlation:
 
 **NodePort not reachable**: Run `make port-forward` as a fallback. This uses `kubectl port-forward` instead of kind NodePort mappings.
 # watchtower
+
+## License
+
+Released under the [MIT No Attribution](LICENSE) license (MIT-0) — permissive, OSI-approved, no
+attribution required.
