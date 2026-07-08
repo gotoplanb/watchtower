@@ -1,20 +1,34 @@
-include .env
+# Watchtower — local observability (LGTM) + SonarQube stack.
+#
+# `make help` is auto-generated: any target with a `## description` after its colon
+# shows up. Add the comment when you add a target — no hand-curated list to drift.
+#
+# .env is optional for `make help` (soft -include); the deploy/port-forward targets DO
+# need it — copy it first: `cp .env.example .env`.
+-include .env
 export
 
-.PHONY: setup teardown deploy status port-forward logs test-data render \
+.DEFAULT_GOAL := help
+
+.PHONY: help setup teardown deploy deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy \
+        enable-local-only disable-local-only status port-forward logs test-data render \
         docker-up docker-down docker-logs docker-status docker-clean
+
+help: ## Show this list (any target with a trailing comment)
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
+	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-20s\033[0m %s\n",$$1,$$2}'
 
 # === Cluster lifecycle ===
 
-setup:
+setup: ## Create the kind cluster (scripts/setup.sh)
 	./scripts/setup.sh
 
-teardown:
+teardown: ## Delete the kind cluster
 	kind delete cluster --name watchtower
 
 # === Deploy LGTM stack ===
 
-deploy: deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy
+deploy: deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy ## Deploy the full LGTM stack via Helm (tempo/loki/mimir/grafana/alloy)
 	@echo "All components deployed. Run 'make status' to check pod health."
 	@echo "Run 'make port-forward' to access Grafana at http://localhost:$(GRAFANA_PORT)"
 
@@ -49,7 +63,7 @@ deploy-alloy:
 
 # === Switch Alloy to local-only mode (if Sumo endpoint is unavailable) ===
 
-enable-local-only:
+enable-local-only: ## Switch Alloy to local-LGTM-only (drop the Sumo write)
 	kubectl create configmap alloy-config \
 		-n watchtower \
 		--from-file=config.alloy=alloy/config-local-only.alloy \
@@ -57,7 +71,7 @@ enable-local-only:
 	kubectl rollout restart deployment alloy -n watchtower
 	@echo "Alloy reverted to local LGTM only."
 
-disable-local-only:
+disable-local-only: ## Restore Alloy dual-write (LGTM + Sumo Logic)
 	kubectl create configmap alloy-config \
 		-n watchtower \
 		--from-file=config.alloy=alloy/config.alloy \
@@ -67,29 +81,29 @@ disable-local-only:
 
 # === Operations ===
 
-status:
+status: ## Show watchtower pod + service status
 	kubectl get pods -n watchtower -o wide
 	@echo ""
 	kubectl get svc -n watchtower
 
-port-forward:
+port-forward: ## Port-forward Grafana + OTLP to localhost (needs .env)
 	@echo "Starting port-forwards (Ctrl+C to stop)..."
 	@echo "Grafana:  http://localhost:$(GRAFANA_PORT) ($(GRAFANA_ADMIN_USER) / $(GRAFANA_ADMIN_PASSWORD))"
 	@echo "OTLP:     localhost:$(OTLP_GRPC_PORT) (gRPC), localhost:$(OTLP_HTTP_PORT) (HTTP)"
 	@./scripts/port-forward.sh
 
-logs:
+logs: ## Tail Alloy logs (kind cluster)
 	kubectl logs -n watchtower -l app.kubernetes.io/name=alloy -f --tail=50
 
 # === Test data ===
 
-test-data:
+test-data: ## Generate synthetic OTLP test data at localhost:14317
 	cd test-data && pip install -r requirements.txt --break-system-packages && \
 		python generate.py --endpoint localhost:14317 --rate 10
 
 # === Learning: render Helm templates to see raw manifests ===
 
-render:
+render: ## Render Helm templates to helm/rendered/ (learning aid)
 	@mkdir -p helm/rendered
 	helm template tempo grafana/tempo -f helm/values/tempo.yaml > helm/rendered/tempo.yaml
 	helm template loki grafana/loki -f helm/values/loki.yaml > helm/rendered/loki.yaml
@@ -103,7 +117,7 @@ render:
 # Docker Compose Deployment (alternative to Kind/Helm)
 # =============================================================================
 
-docker-up:
+docker-up: ## Start the stack via docker-compose (the primary path)
 	docker-compose up -d
 	@echo ""
 	@echo "Watchtower stack started!"
@@ -113,15 +127,15 @@ docker-up:
 	@echo ""
 	@echo "Run 'make docker-logs' to tail Alloy logs"
 
-docker-down:
+docker-down: ## Stop the docker-compose stack
 	docker-compose down
 
-docker-logs:
+docker-logs: ## Tail Alloy logs (docker-compose)
 	docker-compose logs -f alloy
 
-docker-status:
+docker-status: ## docker-compose ps
 	docker-compose ps
 
-docker-clean:
+docker-clean: ## docker-compose down -v (removes volumes — deletes all data)
 	docker-compose down -v
 	@echo "Volumes removed. All data deleted."
