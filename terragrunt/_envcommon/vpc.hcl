@@ -5,7 +5,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/vpc/aws//.?version=5.13.0"
+  source = "tfr:///terraform-aws-modules/vpc/aws//.?version=5.21.0"
 }
 
 inputs = {

@@ -20,7 +20,7 @@ services:
   # TEMPO - Distributed Tracing Backend
   # ============================================================================
   tempo:
-    image: grafana/tempo:2.7.2
+    image: grafana/tempo:2.10.8
     container_name: watchtower-tempo
     command: ["-config.file=/etc/tempo/tempo-config.yaml"]
     volumes:
@@ -39,7 +39,7 @@ services:
   # LOKI - Log Aggregation
   # ============================================================================
   loki:
-    image: grafana/loki:2.9.3
+    image: grafana/loki:2.9.17
     container_name: watchtower-loki
     command: ["-config.file=/etc/loki/loki-config.yaml"]
     volumes:

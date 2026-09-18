@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/ecs/aws//modules/service?version=5.12.0"
+  source = "tfr:///terraform-aws-modules/ecs/aws//modules/service?version=5.12.1"
 }
 
 dependency "cluster" {

@@ -9,7 +9,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/efs/aws//.?version=1.6.5"
+  source = "tfr:///terraform-aws-modules/efs/aws//.?version=1.8.1"
 }
 
 dependency "vpc" {

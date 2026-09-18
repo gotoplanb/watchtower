@@ -5,7 +5,7 @@ locals {
 }
 
 terraform {
-  source = "tfr:///terraform-aws-modules/alb/aws//.?version=9.11.0"
+  source = "tfr:///terraform-aws-modules/alb/aws//.?version=9.17.0"
 }
 
 dependency "vpc" {

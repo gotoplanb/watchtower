@@ -16,7 +16,7 @@ resource "aws_service_discovery_http_namespace" "this" {
 
 module "cluster" {
   source  = "terraform-aws-modules/ecs/aws//modules/cluster"
-  version = "5.12.0"
+  version = "5.12.1"
 
   cluster_name     = var.cluster_name
   cluster_settings = [{ name = "containerInsights", value = "enabled" }]
