@@ -64,6 +64,25 @@ Three of these images have now broken a healthcheck by not shipping the binary i
 
 A `service_healthy` dependency on a container that *can't* report health fails the whole `docker compose up` with `dependency failed to start: container X is unhealthy` — so when an image goes distroless, fix its dependents too (`grafana` and `alloy` both gate on tempo).
 
+### Upgrading SonarQube needs a manual migration trigger
+
+A SonarQube version bump does **not** self-migrate its database. On first start the new image reports `DB_MIGRATION_NEEDED` and sits there — it looks hung, but it's waiting on you:
+
+```bash
+docker compose pull sonarqube && docker compose up -d sonarqube
+curl -s localhost:9000/api/system/status              # -> DB_MIGRATION_NEEDED
+curl -s -X POST localhost:9000/api/system/migrate_db  # -> MIGRATION_RUNNING
+curl -s localhost:9000/api/system/status              # -> UP
+```
+
+**The migration is one-way** — you cannot roll back to the older image afterward. Dump the DB first:
+
+```bash
+docker exec watchtower-sonarqube-db pg_dump -U sonarqube -d sonarqube > sonarqube-backup.sql
+```
+
+Verified 2026-09-19 on 26.4.0 → 26.9.0 (5 minors): migration took under 15s, schema went `202602001` → `202605057`, and all 6 projects / 320 issues survived. The container's 120s `start_period` covers the migration wait, and nothing else `depends_on` sonarqube, so an unhealthy window here doesn't block the stack.
+
 ### Gates before you push
 
 ```bash
