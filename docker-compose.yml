@@ -145,7 +145,7 @@ services:
   # SONARQUBE - Code Quality & Security Analysis
   # ============================================================================
   sonarqube:
-    image: sonarqube:26.8.0.126808-community
+    image: sonarqube:26.9.0.129388-community
     container_name: watchtower-sonarqube
     environment:
       - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonarqube
