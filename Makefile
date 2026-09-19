@@ -12,7 +12,7 @@ export
 
 .PHONY: help setup teardown deploy deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy \
         enable-local-only disable-local-only status port-forward logs test-data render \
-        docker-up docker-down docker-logs docker-status docker-clean
+        docker-up docker-down docker-logs docker-status docker-clean test
 
 help: ## Show this list (any target with a trailing comment)
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -94,6 +94,11 @@ port-forward: ## Port-forward Grafana + OTLP to localhost (needs .env)
 
 logs: ## Tail Alloy logs (kind cluster)
 	kubectl logs -n watchtower -l app.kubernetes.io/name=alloy -f --tail=50
+
+# === Tests ===
+
+test: ## Run the repo's test suite (no docker daemon needed)
+	python3 -m unittest discover -s tests -v
 
 # === Test data ===
 
