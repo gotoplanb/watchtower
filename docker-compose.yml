@@ -58,7 +58,7 @@ services:
   # PROMETHEUS - Metrics (with remote-write enabled)
   # ============================================================================
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.14.0
     container_name: watchtower-prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yaml"
@@ -81,7 +81,7 @@ services:
   # GRAFANA - Visualization & Dashboards
   # ============================================================================
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:13.2.1
     container_name: watchtower-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -111,7 +111,7 @@ services:
   # ALLOY - OpenTelemetry Collector (OTLP receiver -> local backends)
   # ============================================================================
   alloy:
-    image: grafana/alloy:latest
+    image: grafana/alloy:v1.19.2
     container_name: watchtower-alloy
     command:
       - run
@@ -145,7 +145,7 @@ services:
   # SONARQUBE - Code Quality & Security Analysis
   # ============================================================================
   sonarqube:
-    image: sonarqube:community
+    image: sonarqube:26.8.0.126808-community
     container_name: watchtower-sonarqube
     environment:
       - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonarqube
