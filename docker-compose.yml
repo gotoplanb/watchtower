@@ -28,11 +28,11 @@ services:
       - tempo-data:/var/tempo
     ports:
       - "3200:3200"   # Tempo API
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    # No healthcheck: the 2.10.x image is distroless (entrypoint is bare
+    # `/tempo`, no shell, no wget/curl/nc), so an in-container probe is
+    # impossible. Verify readiness from the host instead:
+    #   curl -s http://localhost:3200/ready   -> "ready"
+    # Alloy therefore gates on `service_started` for tempo; see its depends_on.
     restart: unless-stopped
 
   # ============================================================================
@@ -94,8 +94,10 @@ services:
     ports:
       - "3000:3000"   # Grafana UI
     depends_on:
+      # tempo can't report health (distroless image, see its service), so gate
+      # on start only. Grafana tolerates a datasource that isn't up yet.
       tempo:
-        condition: service_healthy
+        condition: service_started
       loki:
         condition: service_healthy
       prometheus:
@@ -127,8 +129,11 @@ services:
       - "4318:4318"   # OTLP HTTP
       - "12345:12345" # Alloy UI
     depends_on:
+      # tempo can't report health (distroless image, see its service), so gate
+      # on start only. The OTLP exporter retries, so Alloy recovers on its own
+      # if it comes up first.
       tempo:
-        condition: service_healthy
+        condition: service_started
       loki:
         condition: service_healthy
       prometheus:

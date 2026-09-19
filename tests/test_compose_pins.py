@@ -16,8 +16,6 @@ import re
 import unittest
 from pathlib import Path
 
-import yaml
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMPOSE_FILE = REPO_ROOT / "docker-compose.yml"
 
@@ -66,10 +64,63 @@ def split_image(ref):
     return ref, None, digest
 
 
+def _strip_comment(line):
+    """Drop a trailing ` #` comment. Image refs never contain '#'."""
+    idx = line.find(" #")
+    return line[:idx] if idx != -1 else line
+
+
 def load_services():
-    with COMPOSE_FILE.open(encoding="utf-8") as fh:
-        compose = yaml.safe_load(fh)
-    return compose.get("services") or {}
+    """Map service name -> {"image": ref, "build": ...} from docker-compose.yml.
+
+    Deliberately dependency-free. This repo has no requirements file and no
+    virtualenv for tests, so `make test` has to pass on a bare `python3` --
+    importing PyYAML here would make the guard fail to run at all, which is
+    worse than the drift it's guarding against.
+
+    The parse is narrow on purpose: it only needs the immediate children of
+    `services:` and their `image:` / `build:` values, which is a flat,
+    two-level slice of the file.
+    """
+    services = {}
+    in_services = False
+    service_indent = None
+    current = None
+
+    for raw in COMPOSE_FILE.read_text(encoding="utf-8").splitlines():
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        line = _strip_comment(raw).rstrip()
+        if not line:
+            continue
+
+        indent = len(line) - len(line.lstrip())
+        stripped = line.strip()
+
+        if indent == 0:
+            in_services = stripped.startswith("services:")
+            current = None
+            continue
+        if not in_services:
+            continue
+
+        if service_indent is None:
+            service_indent = indent
+
+        if indent == service_indent and stripped.endswith(":"):
+            current = stripped[:-1].strip()
+            services[current] = {}
+            continue
+
+        if current is not None and indent > service_indent:
+            for key in ("image", "build"):
+                if stripped.startswith(key + ":"):
+                    value = stripped[len(key) + 1 :].strip().strip("'\"")
+                    # A nested `build:` block has no inline value; its mere
+                    # presence is all the image-pin tests need.
+                    services[current][key] = value or True
+
+    return services
 
 
 class ComposeFileTests(unittest.TestCase):
@@ -78,10 +129,12 @@ class ComposeFileTests(unittest.TestCase):
     def test_compose_file_exists(self):
         self.assertTrue(COMPOSE_FILE.is_file(), f"missing {COMPOSE_FILE}")
 
-    def test_compose_file_parses_as_yaml(self):
-        with COMPOSE_FILE.open(encoding="utf-8") as fh:
-            compose = yaml.safe_load(fh)
-        self.assertIsInstance(compose, dict, "docker-compose.yml is not a mapping")
+    def test_compose_file_parses(self):
+        services = load_services()
+        self.assertIsInstance(services, dict)
+        for name, spec in services.items():
+            with self.subTest(service=name):
+                self.assertIsInstance(spec, dict, f"service '{name}' did not parse")
 
     def test_has_services(self):
         self.assertTrue(load_services(), "docker-compose.yml declares no services")

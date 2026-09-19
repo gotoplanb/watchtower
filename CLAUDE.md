@@ -51,6 +51,29 @@ make docker-clean      # Down + delete volumes (wipes data)
 
 To pick up an Alloy config edit: `docker compose restart alloy`. The dir is bind-mounted, no rebuild needed. (If you change the *volume mount or command* in `docker-compose.yml`, use `docker compose up -d alloy` to recreate.)
 
+### Healthchecks: check what's in the image first
+
+Three of these images have now broken a healthcheck by not shipping the binary it called. Before writing or bumping one, verify the tool exists — `docker run --rm --entrypoint wget <image> --version`:
+
+| Image | Has | Healthcheck must use |
+|-------|-----|----------------------|
+| `grafana/tempo` 2.10.x | **nothing** — distroless, entrypoint is bare `/tempo`, no shell | **impossible in-container.** No healthcheck; dependents gate on `service_started`. Probe from the host: `curl -s localhost:3200/ready` |
+| `grafana/alloy` | `bash`, no wget/curl/nc | `bash -c "exec 3<>/dev/tcp/localhost/12345"` |
+| `sonarqube` 26.x | `curl`, no wget | `curl -sf .../api/system/status` |
+| `grafana/loki`, `prom/prometheus`, `grafana/grafana` | `wget` | `wget --spider <ready-url>` |
+
+A `service_healthy` dependency on a container that *can't* report health fails the whole `docker compose up` with `dependency failed to start: container X is unhealthy` — so when an image goes distroless, fix its dependents too (`grafana` and `alloy` both gate on tempo).
+
+### Gates before you push
+
+```bash
+make test    # static: docker-compose image pins are real versions, no floating tags. No daemon needed.
+make smoke   # E2E: emit OTLP, assert it lands in Tempo + Loki + Prometheus. Needs the stack up.
+make verify  # both
+```
+
+`make smoke` (`scripts/smoke_telemetry.py`) tags every run with a fresh `service.name=watchtower-smoke-<epoch>`, so a pass can't be stale data and the queries stay inside Tempo's 1-hour search window. Run it after any image bump or Alloy config change — container health proves the process booted, not that telemetry arrives.
+
 ### Alloy pipeline (current docker-compose config)
 
 ```

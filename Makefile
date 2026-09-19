@@ -12,7 +12,7 @@ export
 
 .PHONY: help setup teardown deploy deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy \
         enable-local-only disable-local-only status port-forward logs test-data render \
-        docker-up docker-down docker-logs docker-status docker-clean test
+        docker-up docker-down docker-logs docker-status docker-clean test smoke verify
 
 help: ## Show this list (any target with a trailing comment)
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -99,6 +99,11 @@ logs: ## Tail Alloy logs (kind cluster)
 
 test: ## Run the repo's test suite (no docker daemon needed)
 	python3 -m unittest discover -s tests -v
+
+smoke: ## E2E: emit telemetry and assert it lands in Tempo, Loki and Prometheus
+	./test-data/.venv/bin/python scripts/smoke_telemetry.py
+
+verify: test smoke ## Full gate: static checks then end-to-end telemetry
 
 # === Test data ===
 
