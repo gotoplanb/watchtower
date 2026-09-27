@@ -53,7 +53,14 @@ To pick up an Alloy config edit: `docker compose restart alloy`. The dir is bind
 
 ### Healthchecks: check what's in the image first
 
-Three of these images have now broken a healthcheck by not shipping the binary it called. Before writing or bumping one, verify the tool exists — `docker run --rm --entrypoint wget <image> --version`:
+Three of these images have now broken a healthcheck by not shipping the binary it called. Before writing or bumping one, verify the tool exists. **Ask the image's own shell — don't probe by running the binary:**
+
+```bash
+docker run --rm --entrypoint sh <image> -c 'command -v wget curl nc bash'
+# no shell at all (distroless) -> the command errors, which is itself the answer
+```
+
+`--entrypoint wget <image> --version` gives **false negatives**: busybox `wget` doesn't support `--version`, so a perfectly good wget looks missing. Same trap with `which` (often absent) and `sh --help`.
 
 | Image | Has | Healthcheck must use |
 |-------|-----|----------------------|
