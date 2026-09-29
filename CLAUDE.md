@@ -100,6 +100,17 @@ make verify  # both
 
 `make smoke` (`scripts/smoke_telemetry.py`) tags every run with a fresh `service.name=watchtower-smoke-<epoch>`, so a pass can't be stale data and the queries stay inside Tempo's 1-hour search window. Run it after any image bump or Alloy config change — container health proves the process booted, not that telemetry arrives.
 
+Four stages, and the last one matters after a **Grafana** bump:
+
+1. every backend answers its health endpoint
+2. emit traces + logs + metrics over OTLP, flushed synchronously
+3. **direct** queries to Tempo / Loki / Prometheus find them
+4. **through Grafana** — datasources provisioned with the expected uids, Grafana's own datasource health passes, and the stage-3 assertions re-run via `/api/datasources/proxy/uid/<uid>/...` still find the data
+
+Stage 3 alone would pass with Grafana completely broken (wrong datasource URL, failed provisioning, bad credentials), because it never touches Grafana. Stage 4 exercises auth, provisioning, the URLs in `docker/grafana-datasources.yaml`, and container-network connectivity — the whole path behind an Explore query.
+
+Grafana creds default to `admin`/`watchtower`; override with `GRAFANA_USER` / `GRAFANA_PASSWORD` or `--grafana-user` / `--grafana-password`. `--skip-ui` drops stage 4 if you're only checking ingest.
+
 ### Alloy pipeline (current docker-compose config)
 
 ```
