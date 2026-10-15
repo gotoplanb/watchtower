@@ -81,7 +81,7 @@ services:
   # GRAFANA - Visualization & Dashboards
   # ============================================================================
   grafana:
-    image: grafana/grafana:13.2.3
+    image: grafana/grafana:13.2.4
     container_name: watchtower-grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -150,7 +150,7 @@ services:
   # SONARQUBE - Code Quality & Security Analysis
   # ============================================================================
   sonarqube:
-    image: sonarqube:26.9.0.129388-community
+    image: sonarqube:26.10.0.133078-community
     container_name: watchtower-sonarqube
     environment:
       - SONAR_JDBC_URL=jdbc:postgresql://sonarqube-db:5432/sonarqube
