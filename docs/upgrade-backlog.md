@@ -6,26 +6,43 @@ routine doesn't re-report the same ones every day.
 
 Update the "last checked" date and the rows below whenever the check runs.
 
-## Last checked: 2026-10-20
+## Last checked: 2026-10-21
 
-Every pin is at the top of its current series — **no patch or minor upgrade was
-available**, nothing applied.
+Two bumps applied: `grafana/tempo` 2.10.8 -> **2.10.9** (patch, 2026-10-20) and
+`grafana/alloy` v1.20.1 -> **v1.21.0** (minor -- the v1.21.0-rc.0 that the last
+check correctly skipped as a pre-release went stable on 2026-10-19). Every other
+pin is still at the top of its series.
+
+`make test` passes (8/8, including the alloy major-pin guard -- v1.21.0 is still
+1.x). **`make smoke` did not run:** there is no `docker` binary in the scheduled
+run's device shell, so the two new images have not been pulled or proven against
+live telemetry. That is Dave's step: `make docker-up && make smoke`.
+
+Alloy v1.21.0 breaking-change review against `docker/alloy-config.d/`, all clear:
+the `loki.write` change (a `wal { enabled = true }` block now needs
+`--stability.level=experimental`) doesn't apply -- `loki.write "local"` has no
+`wal` block; `otelcol.connector.signaltometrics` and the kafka
+receiver/exporter aren't used; and `loki_write_sent_bytes_total` /
+`loki_write_dropped_bytes_total` now count uncompressed bytes, which no
+dashboard references. `otelcol.exporter.loki` and `otelcol.exporter.prometheus`
+are untouched by this release (the only removal was the experimental
+`prometheus.exporter.catchpoint`).
 
 | Pin | Current | Newest in series | Source |
 |-----|---------|------------------|--------|
-| `grafana/tempo` | 2.10.8 | 2.10.8 | Docker Hub |
-| `grafana/loki` | 2.9.17 | 2.9.17 (2.9 line dormant ~12 months) | Docker Hub |
-| `prom/prometheus` | v3.15.0 | v3.15.0 | Docker Hub |
-| `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; no 13.3 branch yet) | Docker Hub |
-| `grafana/alloy` | v1.20.1 | v1.20.1 (v1.21.0-rc.0, 2026-10-14, is pre-release) | Docker Hub |
-| `sonarqube` | 26.10.0.133078-community | same (26.10, 2026-10-12) | Docker Hub |
+| `grafana/tempo` | 2.10.9 | 2.10.9 (2026-10-20) **bumped** | releasealert/github |
+| `grafana/loki` | 2.9.17 | 2.9.17 (no 2.9.x in the last ~12 months; confirmed back to 2025-12 on the GitHub release list) | releasealert/github |
+| `prom/prometheus` | v3.15.0 | v3.15.0 (LTS line is v3.13.5) | prometheus.io |
+| `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; still no 13.3 branch) | versionlog |
+| `grafana/alloy` | v1.21.0 | v1.21.0 (2026-10-19) **bumped** | releasealert/github |
+| `sonarqube` | 26.10.0.133078-community | same (26.10, 2026-10-12) | endoflife.date |
 | `terraform-aws-modules/ecs` | 5.12.1 | 5.12.1 (last of 5.x) | TF Registry |
 | `terraform-aws-modules/vpc` | 5.21.0 | 5.21.0 (last of 5.x) | TF Registry |
 | `terraform-aws-modules/alb` | 9.17.0 | 9.17.0 (last of 9.x) | TF Registry |
 | `terraform-aws-modules/efs` | 1.8.1 | 1.8.1 (last of 1.x) | TF Registry |
 | `terraform-aws-modules/acm` | 5.2.0 | 5.2.0 (last of 5.x) | TF Registry |
 
-`postgres:16-alpine` and `rust:1-slim-bookworm` are major-pinned floating tags —
+`postgres:16-alpine` and `rust:1-slim-bookworm` are major-pinned floating tags --
 patch/minor arrive on their own with a `docker compose pull`. `test-data/requirements.txt`
 uses `>=` constraints, so there is nothing to bump there either.
 
@@ -82,7 +99,7 @@ releases, so the patch/minor stream is dry until one is taken.
 
 | Component | Current | Latest | Notes |
 |-----------|---------|--------|-------|
-| `grafana/tempo` | 2.10.8 | 3.1.0 | Big config migration. `ingester`/`ingester_client`/`compactor`/`metrics_generator_client` blocks are **removed**; legacy flat overrides block startup (`tempo-cli migrate overrides-config`); block/WAL settings move under `storage.trace.block`; `query_ingesters_until` → `query_backend_after`; TraceQL `!=`/`!~` behavior on array attributes changed. `tempo-cli migrate config` automates most of it. The 3.0 line is still maintained (3.0.4, 2026-10-16) if 3.1 looks too fresh. |
+| `grafana/tempo` | 2.10.9 | 3.1.0 | Big config migration. `ingester`/`ingester_client`/`compactor`/`metrics_generator_client` blocks are **removed**; legacy flat overrides block startup (`tempo-cli migrate overrides-config`); block/WAL settings move under `storage.trace.block`; `query_ingesters_until` → `query_backend_after`; TraceQL `!=`/`!~` behavior on array attributes changed. `tempo-cli migrate config` automates most of it. The 3.0 line is still maintained (3.0.4, 2026-10-16) if 3.1 looks too fresh. |
 | `grafana/loki` | 2.9.17 | 3.7.8 | 2.9.x has had no release in ~12 months. Loki 3 wants TSDB + schema v13 and reshuffles config; the OTLP→Loki write path and the `job`/`exporter`/`level` labels this repo relies on are worth re-verifying with `make smoke` after. The 3.6 line (3.6.18, 2026-10-15) is the conservative landing spot. |
 | `terraform-aws-modules/ecs` | 5.12.1 | 7.6.1 | Two majors behind; the `//modules/service` interface changed. Affects all five `service-*.hcl`. |
 | `terraform-aws-modules/vpc` | 5.21.0 | 6.7.3 | — |
