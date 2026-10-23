@@ -6,34 +6,28 @@ routine doesn't re-report the same ones every day.
 
 Update the "last checked" date and the rows below whenever the check runs.
 
-## Last checked: 2026-10-22
+## Last checked: 2026-10-23
 
-Three patch bumps applied: `grafana/tempo` 2.10.9 -> **2.10.10** (2026-10-21),
-`prom/prometheus` v3.15.0 -> **v3.15.1**, and `grafana/alloy` v1.21.0 ->
-**v1.21.1** (2026-10-21). All three are patches inside series already in use, so
-they fall in Dave's auto-apply range. Every other pin is at the top of its
-series; `grafana/loki` 2.9.x is still dry and the majors below still await a
-decision.
+**No patch or minor upgrades available.** Every pin is the newest in its series;
+nothing was changed. `make test` passes (8/8).
 
-`make test` passes (8/8). **`make smoke` did not run** -- still no `docker`
-binary in the scheduled run's device shell, so these three images have not been
-pulled or proven against live telemetry. That remains Dave's step:
-`make docker-up && make smoke`. Note this stacks on top of yesterday's
-unverified tempo/alloy bump -- nothing since 2026-10-20 has been smoke-tested.
+Yesterday's three bumps (tempo 2.10.10, prometheus v3.15.1, alloy v1.21.1) were
+re-verified against upstream and are all real and current -- see the tempo note
+below, which is worth reading before trusting a "no such release" result.
 
-Could not read the v1.21.1 / 2.10.10 / v3.15.1 changelogs: **GitHub page content
-fetched in this environment is stale by ~2 months** (see the lookup note below),
-and the vendor release-note pages don't break out patch releases. Patch-level
-risk is low and the 1.21 config review from 2026-10-21 still holds, but `make
-smoke` is the real gate here, not a changelog read.
+**`make smoke` still has not run.** There is no `docker` binary in the scheduled
+run's device shell, so nothing since 2026-10-20 has been proven against live
+telemetry: the tempo, prometheus and alloy bumps from 10-21/10-22 remain
+unverified beyond the static pin tests. This is now three days of unsmoked
+changes. Dave's step: `make docker-up && make smoke`.
 
 | Pin | Current | Newest in series | Source |
 |-----|---------|------------------|--------|
-| `grafana/tempo` | 2.10.10 | 2.10.10 (2026-10-21) **bumped** | releasealert |
-| `grafana/loki` | 2.9.17 | 2.9.17 (no 2.9.x in the last ~12 months; confirmed back to 2025-12 on the GitHub release list) | releasealert/github |
-| `prom/prometheus` | v3.15.1 | v3.15.1 (LTS line is v3.13.5) **bumped** | prometheus.io |
-| `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; still no 13.3 branch) | endoflife.date |
-| `grafana/alloy` | v1.21.1 | v1.21.1 (2026-10-21) **bumped** | releasealert |
+| `grafana/tempo` | 2.10.10 | 2.10.10 (2026-10-21) | releasealert/dockerhub |
+| `grafana/loki` | 2.9.17 | 2.9.17 (still no 2.9.x; newest 3.x is 3.7.9, 2026-10-20) | releasealert/github |
+| `prom/prometheus` | v3.15.1 | v3.15.1 (LTS line v3.13.5) | prometheus.io |
+| `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; still no 13.3 branch) | versionlog |
+| `grafana/alloy` | v1.21.1 | v1.21.1 (2026-10-21) | releasealert |
 | `sonarqube` | 26.10.0.133078-community | same (26.10, 2026-10-12) | endoflife.date |
 | `terraform-aws-modules/ecs` | 5.12.1 | 5.12.1 (last of 5.x) | TF Registry |
 | `terraform-aws-modules/vpc` | 5.21.0 | 5.21.0 (last of 5.x) | TF Registry |
@@ -44,6 +38,19 @@ smoke` is the real gate here, not a changelog read.
 `postgres:16-alpine` and `rust:1-slim-bookworm` are major-pinned floating tags --
 patch/minor arrive on their own with a `docker compose pull`. `test-data/requirements.txt`
 uses `>=` constraints, so there is nothing to bump there either.
+
+### Tempo: use the Docker Hub view, not the GitHub view
+
+On 2026-10-23 `releasealert.dev/github/grafana/tempo` showed 2.10.9 (10-20) as
+the newest 2.10.x and omitted 2.10.10, 3.0.5 and 3.1.1 entirely -- i.e. it was
+missing everything published on 10-21, even though the *same site's* alloy page
+had 10-21 data. A run that trusts it will conclude the committed 2.10.10 pin
+points at a nonexistent image and is tempted to "fix" it by reverting.
+
+`releasealert.dev/dockerhub/grafana/tempo` is current and lists 2.10.10, 3.0.5
+and 3.1.1 all dated 10-21; a web search surfaces the real
+`github.com/grafana/tempo/releases/tag/v2.10.10` page. **Check tempo against the
+dockerhub view, and never revert a pin on the strength of one absent listing.**
 
 ## Where to look things up
 
