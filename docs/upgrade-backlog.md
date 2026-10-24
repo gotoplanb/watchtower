@@ -13,12 +13,15 @@ on both the GitHub release list (marked Stable) and the Docker Hub tag list, so
 it is not a releasealert artifact of the kind described in the tempo note below.
 `make test` passes (8/8). Everything else is still the newest in its series.
 
-**`make smoke` still has not run.** There is no `docker` binary in the scheduled
-run's device shell, so nothing since 2026-10-20 has been proven against live
-telemetry: the tempo/prometheus/alloy bumps from 10-21 and 10-22 plus today's
-alloy patch remain unverified beyond the static pin tests. That is **four days
-of unsmoked changes**, and three of the four touch Alloy, which is the component
-the smoke test actually exercises. Dave's step: `make docker-up && make smoke`.
+**Deployed and smoked 2026-10-24** (interactive session on Dave's machine).
+The running containers had drifted to the late-September pins; all current pins
+are now live: tempo 2.10.10, prometheus v3.15.1, grafana 13.2.4, alloy v1.21.2,
+sonarqube 26.10.0 (DB dumped first, `migrate_db` triggered, status `UP`).
+`make smoke` passes all four stages, including the Grafana proxy path.
+
+The scheduled run still has no `docker` binary, so it can bump pins but never
+deploy or smoke them. Pins committed by the scheduled run are **not live** until
+someone runs `docker compose pull && docker compose up -d && make smoke` here.
 
 | Pin | Current | Newest in series | Source |
 |-----|---------|------------------|--------|
