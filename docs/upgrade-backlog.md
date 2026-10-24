@@ -1,27 +1,27 @@
 # Upgrade backlog
 
-Running state for the scheduled dependency check. Patch and minor bumps get
-applied automatically; **majors wait for a decision** and live here so the
-routine doesn't re-report the same ones every day.
+State for the dependency update, done by hand with Claude roughly every two
+weeks on Dave's machine (there is no scheduled job: one existed until 2026-10-24,
+but it had no `docker`, so it committed pins it could never deploy or smoke).
+Patch and minor bumps get applied in the session; **majors wait for a decision**
+and live in the table at the bottom.
 
-Update the "last checked" date and the rows below whenever the check runs.
+## Update checklist
 
-## Last checked: 2026-10-24
+1. Look up the newest release in each series (sources below) and bump the pins.
+2. `make test` -- pins are real versions, no floating tags.
+3. `docker ps` vs `grep image: docker-compose.yml` -- the running images, not the
+   repo, are what's live. They have drifted before.
+4. SonarQube bump only: `pg_dump` to `~/watchtower-backups/` first, then
+   `migrate_db` after it starts (one-way; see CLAUDE.md).
+5. `docker compose pull && docker compose up -d`, then `make smoke`.
+6. Update the "last updated" date and table below, commit, push.
 
-**One patch applied: `grafana/alloy` v1.21.1 -> v1.21.2** (2026-10-22). Confirmed
-on both the GitHub release list (marked Stable) and the Docker Hub tag list, so
-it is not a releasealert artifact of the kind described in the tempo note below.
-`make test` passes (8/8). Everything else is still the newest in its series.
+## Last updated: 2026-10-24
 
-**Deployed and smoked 2026-10-24** (interactive session on Dave's machine).
-The running containers had drifted to the late-September pins; all current pins
-are now live: tempo 2.10.10, prometheus v3.15.1, grafana 13.2.4, alloy v1.21.2,
-sonarqube 26.10.0 (DB dumped first, `migrate_db` triggered, status `UP`).
-`make smoke` passes all four stages, including the Grafana proxy path.
-
-The scheduled run still has no `docker` binary, so it can bump pins but never
-deploy or smoke them. Pins committed by the scheduled run are **not live** until
-someone runs `docker compose pull && docker compose up -d && make smoke` here.
+All pins below are deployed and pass `make smoke` (all four stages, including the
+Grafana proxy path). SonarQube was migrated 26.9.0 -> 26.10.0 with a DB dump
+taken first.
 
 | Pin | Current | Newest in series | Source |
 |-----|---------|------------------|--------|
@@ -46,7 +46,7 @@ uses `>=` constraints, so there is nothing to bump there either.
 On 2026-10-23 `releasealert.dev/github/grafana/tempo` showed 2.10.9 (10-20) as
 the newest 2.10.x and omitted 2.10.10, 3.0.5 and 3.1.1 entirely -- i.e. it was
 missing everything published on 10-21, even though the *same site's* alloy page
-had 10-21 data. A run that trusts it will conclude the committed 2.10.10 pin
+had 10-21 data. Trusting it, you would conclude the committed 2.10.10 pin
 points at a nonexistent image and is tempted to "fix" it by reverting.
 
 `releasealert.dev/dockerhub/grafana/tempo` is current and lists 2.10.10, 3.0.5
@@ -56,16 +56,14 @@ dockerhub view, and never revert a pin on the strength of one absent listing.**
 
 ## Where to look things up
 
-`hub.docker.com` and `registry.terraform.io` are **not reachable** from the
-scheduled run (the proxy answers 403 to CONNECT, from both the cloud container
-and the device shell), and the `gh` CLI has no access to these upstream repos.
-Don't burn a run retrying them. What works, via web fetch:
+From Dave's machine `curl` to Docker Hub and the Terraform Registry works, so
+those are the most direct check. If you're going through web fetch instead:
 
 **GitHub itself is worse than useless here:** `github.com/<org>/<repo>/releases`
 and raw `CHANGELOG.md` fetched through web fetch return a cached crawl roughly
 two months old (on 2026-10-22 it showed Tempo's newest as v2.10.8/13 Aug and
 Prometheus's as v3.14.0, both wrong by several releases). It looks authoritative
-and it is not -- a run that trusts it will conclude the current pins are ahead
+and it is not -- trusting it, you would conclude the current pins are ahead
 of upstream and "fabricated". Cross-check against the sources below, which are
 current.
 
@@ -81,32 +79,6 @@ current.
 series: the tag list is sorted newest-push-first and is ~420 pages of `main-<sha>`
 CI tags, so a 2.9.x tag never appears. Use the GitHub release list
 (`/github/grafana/loki`) and read the series off that instead.
-
-## Committing from the scheduled run
-
-Two things bite every run; the 2026-10-19 run lost its doc update to the first.
-
-- **No git identity in this repo.** `git commit` fails with "Author identity
-  unknown" — there is no `user.name`/`user.email` locally or globally in the
-  device shell. Pass one inline:
-  `git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit ...`
-  (matches the 10-16/10-17 commits). A repo-local `git config user.email` would
-  remove the need, but that's Dave's call.
-- **Deleting isn't permitted in the connected folder**, so git can't clean up
-  after itself. Two symptoms:
-  - `unable to unlink .git/objects/*/tmp_obj_*` warnings on every commit. Those
-    are harmless — filter them out, the commit still lands.
-  - **Each git command leaves its lock file behind**, so the *next* one dies with
-    `Unable to create '.git/<X>.lock': File exists`. This is what ate the 10-19
-    run. It is not a concurrent git — move the lock aside and retry, one at a
-    time (`index.lock` after an `add`, then `HEAD.lock` on the commit):
-    `mv .git/index.lock .git/stale-locks/$(date +%s)-index.lock`
-    Never `mv` a lock into `.git/refs/`. Budget 2-3 retries per commit.
-
-  Asking for delete permission would fix both, but a previous session's request
-  was declined (hence `_to_delete/` and `.deltest-5` in the repo root), so runs
-  shouldn't re-ask. `.git/stale-locks/` and the `tmp_obj_*` files are accumulated
-  residue and are safe for Dave to delete by hand.
 
 ## Majors awaiting a decision
 
@@ -128,7 +100,7 @@ move together whenever the AWS side gets attention. Tempo and Loki are the ones
 that matter for the local stack, and each should be done alone, with
 `make verify` after.
 
-## Reminders when a bump does land
+## Reminders when a bump lands
 
 - `make test` guards the compose pins (static, no daemon). `make smoke` proves
   telemetry actually arrives — container health only proves the process booted.
