@@ -6,28 +6,27 @@ routine doesn't re-report the same ones every day.
 
 Update the "last checked" date and the rows below whenever the check runs.
 
-## Last checked: 2026-10-23
+## Last checked: 2026-10-24
 
-**No patch or minor upgrades available.** Every pin is the newest in its series;
-nothing was changed. `make test` passes (8/8).
-
-Yesterday's three bumps (tempo 2.10.10, prometheus v3.15.1, alloy v1.21.1) were
-re-verified against upstream and are all real and current -- see the tempo note
-below, which is worth reading before trusting a "no such release" result.
+**One patch applied: `grafana/alloy` v1.21.1 -> v1.21.2** (2026-10-22). Confirmed
+on both the GitHub release list (marked Stable) and the Docker Hub tag list, so
+it is not a releasealert artifact of the kind described in the tempo note below.
+`make test` passes (8/8). Everything else is still the newest in its series.
 
 **`make smoke` still has not run.** There is no `docker` binary in the scheduled
 run's device shell, so nothing since 2026-10-20 has been proven against live
-telemetry: the tempo, prometheus and alloy bumps from 10-21/10-22 remain
-unverified beyond the static pin tests. This is now three days of unsmoked
-changes. Dave's step: `make docker-up && make smoke`.
+telemetry: the tempo/prometheus/alloy bumps from 10-21 and 10-22 plus today's
+alloy patch remain unverified beyond the static pin tests. That is **four days
+of unsmoked changes**, and three of the four touch Alloy, which is the component
+the smoke test actually exercises. Dave's step: `make docker-up && make smoke`.
 
 | Pin | Current | Newest in series | Source |
 |-----|---------|------------------|--------|
 | `grafana/tempo` | 2.10.10 | 2.10.10 (2026-10-21) | releasealert/dockerhub |
-| `grafana/loki` | 2.9.17 | 2.9.17 (still no 2.9.x; newest 3.x is 3.7.9, 2026-10-20) | releasealert/github |
+| `grafana/loki` | 2.9.17 | 2.9.17 (2025-11-07; still no newer 2.9.x; newest 3.x is 3.7.9, 2026-10-20) | releasealert/github |
 | `prom/prometheus` | v3.15.1 | v3.15.1 (LTS line v3.13.5) | prometheus.io |
 | `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; still no 13.3 branch) | versionlog |
-| `grafana/alloy` | v1.21.1 | v1.21.1 (2026-10-21) | releasealert |
+| `grafana/alloy` | **v1.21.2** | v1.21.2 (2026-10-22) | releasealert github+dockerhub |
 | `sonarqube` | 26.10.0.133078-community | same (26.10, 2026-10-12) | endoflife.date |
 | `terraform-aws-modules/ecs` | 5.12.1 | 5.12.1 (last of 5.x) | TF Registry |
 | `terraform-aws-modules/vpc` | 5.21.0 | 5.21.0 (last of 5.x) | TF Registry |
