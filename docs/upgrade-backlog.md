@@ -31,7 +31,7 @@ taken first.
 | `grafana/tempo` | 2.10.10 | 2.10.10 (2026-10-21) | releasealert/dockerhub |
 | `grafana/loki` | 2.9.17 | 2.9.17 (2025-11-07; still no newer 2.9.x; newest 3.x is 3.7.9, 2026-10-20) | releasealert/github |
 | `prom/prometheus` | v3.15.1 | v3.15.1 (LTS line v3.13.5) | prometheus.io |
-| `grafana/grafana` | 13.2.4 | 13.2.4 (2026-10-13; still no 13.3 branch) | versionlog |
+| `grafana/grafana` | 13.2.5 | 13.2.5 (2026-10-27; HTTP2Shell fix; still no 13.3 branch) | Docker Hub API |
 | `grafana/alloy` | **v1.21.2** | v1.21.2 (2026-10-22) | releasealert github+dockerhub |
 | `sonarqube` | 26.10.0.133078-community | same (26.10, 2026-10-12) | endoflife.date |
 | `terraform-aws-modules/ecs` | 5.12.1 | 5.12.1 (last of 5.x) | TF Registry |
@@ -110,11 +110,25 @@ After pulling `postgres:16-alpine` and rebuilding `rust-build` (375 -> 3 finding
 | Image | Crit / High (fixable) | Who fixes it |
 |-------|-----------------------|--------------|
 | `grafana/loki:2.9.17` | 4 / 74 | us -- take the Loki 3 major |
-| `grafana/grafana:13.2.4` | 0 / 27 | upstream (Go deps); next patch |
+| `grafana/grafana:13.2.4` | 0 / 27 | upstream (Go deps); 13.2.5 taken same day |
 | `postgres:16-alpine` | 1 / 25 | upstream (`gosu` Go stdlib) |
 | `sonarqube:26.10` | 1 / 18 | upstream (netty in a jar) |
 | `rust-build` | 0 / 3 | -- |
 | alloy, tempo, prometheus | 0 / 0 | -- |
+
+### HTTP2Shell (CVE-2026-111497), checked 2026-10-27
+
+Buffer overflow in Brotli's **C** decoder (fixed in Brotli 1.0.10 / 1.1.1 / 1.2.1,
+Node 22.23.4 / 24.22.1 / 26.12.1, Python `Brotli`/`brotlicffi` 1.2.1). Trivy knows
+it, so `make scan` will flag it from now on.
+
+- Was hit: `grafana/grafana:13.2.4` (alpine `brotli-libs` 1.2.0) -> **bumped to
+  13.2.5**; `sonarqube:26.10.0` (ubuntu `libbrotli1`) -> same tag was rebuilt
+  upstream on 10-27, **re-pulled**. Both rescanned clean; `make smoke` passes.
+- Not affected: `github.com/andybalholm/brotli` in tempo/alloy/grafana is a pure-Go
+  port, not the C decoder. Loki, Prometheus, Postgres, rust-build: no Brotli.
+- Outside this repo: `conduct:local` and `crossover:local` carry Debian
+  `libbrotli1` (fixed in `+deb12u1` / `+deb13u1`; a `--pull` rebuild clears it).
 
 ## Reminders when a bump lands
 
