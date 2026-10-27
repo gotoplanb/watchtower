@@ -14,8 +14,11 @@ and live in the table at the bottom.
    repo, are what's live. They have drifted before.
 4. SonarQube bump only: `pg_dump` to `~/watchtower-backups/` first, then
    `migrate_db` after it starts (one-way; see CLAUDE.md).
-5. `docker compose pull && docker compose up -d`, then `make smoke`.
-6. Update the "last updated" date and table below, commit, push.
+5. `docker compose pull && docker compose up -d`, `docker compose build --pull rust-build`,
+   then `make smoke`.
+6. `make scan` -- CVEs in the images now running. Note anything critical with a fix
+   below; a pull/rebuild has already cleared what a stale local copy caused.
+7. Update the "last updated" date and table below, commit, push.
 
 ## Last updated: 2026-10-24
 
@@ -88,7 +91,7 @@ releases, so the patch/minor stream is dry until one is taken.
 | Component | Current | Latest | Notes |
 |-----------|---------|--------|-------|
 | `grafana/tempo` | 2.10.10 | 3.1.1 | Big config migration. `ingester`/`ingester_client`/`compactor`/`metrics_generator_client` blocks are **removed**; legacy flat overrides block startup (`tempo-cli migrate overrides-config`); block/WAL settings move under `storage.trace.block`; `query_ingesters_until` → `query_backend_after`; TraceQL `!=`/`!~` behavior on array attributes changed. `tempo-cli migrate config` automates most of it. The 3.0 line is still maintained (3.0.5, 2026-10-21) if 3.1 looks too fresh. |
-| `grafana/loki` | 2.9.17 | 3.7.9 | 2.9.x has had no release in ~12 months. Loki 3 wants TSDB + schema v13 and reshuffles config; the OTLP→Loki write path and the `job`/`exporter`/`level` labels this repo relies on are worth re-verifying with `make smoke` after. The 3.6 line (3.6.19, 2026-10-20) is the conservative landing spot. |
+| `grafana/loki` | 2.9.17 | 3.7.9 | **Security reason to move:** `make scan` on 2026-10-27 found 4 critical + 74 high with fixes available (Go stdlib, grpc v1.59.0, alpine openssl) that 2.9.x will never get. 2.9.x has had no release in ~12 months. Loki 3 wants TSDB + schema v13 and reshuffles config; the OTLP→Loki write path and the `job`/`exporter`/`level` labels this repo relies on are worth re-verifying with `make smoke` after. The 3.6 line (3.6.19, 2026-10-20) is the conservative landing spot. |
 | `terraform-aws-modules/ecs` | 5.12.1 | 7.6.1 | Two majors behind; the `//modules/service` interface changed. Affects all five `service-*.hcl`. |
 | `terraform-aws-modules/vpc` | 5.21.0 | 6.7.3 | — |
 | `terraform-aws-modules/alb` | 9.17.0 | 10.5.1 | Used by both `alb.hcl` and `nlb.hcl`. |
@@ -99,6 +102,19 @@ The Terragrunt stack isn't the active path (docker-compose is), so those five ca
 move together whenever the AWS side gets attention. Tempo and Loki are the ones
 that matter for the local stack, and each should be done alone, with
 `make verify` after.
+
+## CVE scan, 2026-10-27 (first run)
+
+After pulling `postgres:16-alpine` and rebuilding `rust-build` (375 -> 3 findings):
+
+| Image | Crit / High (fixable) | Who fixes it |
+|-------|-----------------------|--------------|
+| `grafana/loki:2.9.17` | 4 / 74 | us -- take the Loki 3 major |
+| `grafana/grafana:13.2.4` | 0 / 27 | upstream (Go deps); next patch |
+| `postgres:16-alpine` | 1 / 25 | upstream (`gosu` Go stdlib) |
+| `sonarqube:26.10` | 1 / 18 | upstream (netty in a jar) |
+| `rust-build` | 0 / 3 | -- |
+| alloy, tempo, prometheus | 0 / 0 | -- |
 
 ## Reminders when a bump lands
 

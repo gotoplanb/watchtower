@@ -12,7 +12,7 @@ export
 
 .PHONY: help setup teardown deploy deploy-tempo deploy-loki deploy-mimir deploy-grafana deploy-alloy \
         enable-local-only disable-local-only status port-forward logs test-data render \
-        docker-up docker-down docker-logs docker-status docker-clean test smoke verify
+        docker-up docker-down docker-logs docker-status docker-clean test smoke verify scan
 
 help: ## Show this list (any target with a trailing comment)
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -104,6 +104,9 @@ smoke: ## E2E: emit telemetry and assert it lands in Tempo, Loki and Prometheus
 	./test-data/.venv/bin/python scripts/smoke_telemetry.py
 
 verify: test smoke ## Full gate: static checks then end-to-end telemetry
+
+scan: ## CVE-scan every compose image with Trivy (HIGH/CRITICAL, fixable). SCAN_EXTRA="conduct:local ..." adds images
+	python3 scripts/scan_images.py $(if $(SCAN_EXTRA),--extra $(SCAN_EXTRA))
 
 # === Test data ===
 

@@ -96,7 +96,10 @@ Verified 2026-09-19 on 26.4.0 → 26.9.0 (5 minors): migration took under 15s, s
 make test    # static: docker-compose image pins are real versions, no floating tags. No daemon needed.
 make smoke   # E2E: emit OTLP, assert it lands in Tempo + Loki + Prometheus. Needs the stack up.
 make verify  # both
+make scan    # Trivy CVE scan of every compose image (HIGH/CRITICAL with a fix). Not a gate.
 ```
+
+`make scan` covers what Dependabot can't: CVEs inside container images. `SCAN_EXTRA="conduct:local crossover:local"` adds the locally built app images. Most findings on a first run are just a stale local copy — `docker compose pull` (floating tags like `postgres:16-alpine`) or `docker compose build --pull rust-build` clears them; what's left after that is upstream's to fix or a reason to take a major (Loki 2.9 is EOL and carries criticals). Trivy is `brew install trivy`. Dependabot alerts cover the lockfiles in each GitHub repo.
 
 `make smoke` (`scripts/smoke_telemetry.py`) tags every run with a fresh `service.name=watchtower-smoke-<epoch>`, so a pass can't be stale data and the queries stay inside Tempo's 1-hour search window. Run it after any image bump or Alloy config change — container health proves the process booted, not that telemetry arrives.
 
